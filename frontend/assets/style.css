@@ -1,0 +1,113 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f4f2f7;
+}
+.chat-container {
+    display: flex;
+    height: 100vh;
+}
+.sidebar {
+    width: 300px;
+    background: #7c3aed;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+}
+.sidebar-header {
+    font-size: 1.5em;
+    font-weight: bold;
+    padding: 20px;
+    background: #6d28d9;
+    text-align: center;
+}
+#user-list {
+    flex: 1;
+    list-style: none;
+    margin: 0;
+    padding: 0 0 20px 0;
+    overflow-y: auto;
+}
+#user-list li {
+    padding: 15px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #6d28d9;
+}
+#user-list li.active, #user-list li:hover {
+    background: #a78bfa;
+    color: #4c1d95;
+}
+.chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+.chat-header {
+    background: #a78bfa;
+    color: #4c1d95;
+    padding: 20px;
+    font-size: 1.2em;
+    border-bottom: 1px solid #e5e7eb;
+}
+.chat-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #f4f2f7;
+}
+.message {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+.message.sent {
+    align-items: flex-end;
+}
+.message.received {
+    align-items: flex-start;
+}
+.message-content {
+    background: #a78bfa;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 20px;
+    max-width: 60%;
+    margin-bottom: 4px;
+}
+.message.sent .message-content {
+    background: #7c3aed;
+}
+.message-time {
+    font-size: 0.8em;
+    color: #a1a1aa;
+    margin-left: 8px;
+}
+#message-form {
+    display: flex;
+    padding: 16px;
+    background: #f4f2f7;
+    border-top: 1px solid #e5e7eb;
+}
+#message-input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    border: 1px solid #a78bfa;
+    outline: none;
+    margin-right: 10px;
+    font-size: 1em;
+}
+#message-form button {
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#message-form button:hover {
+    background: #6d28d9;
+}

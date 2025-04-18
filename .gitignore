@@ -1,0 +1,53 @@
+# PHP Composer dependencies
+/vendor/
+
+# === PHP Backend ===
+/vendor/
+backend/config.php
+backend/*.log
+
+# === JS Frontend ===
+/frontend/node_modules/
+/frontend/assets/build/
+
+# === Logs ===
+*.log
+
+# === OS generated files ===
+.DS_Store
+Thumbs.db
+
+# === IDE and editor folders ===
+.idea/
+.vscode/
+*.swp
+
+# === Environment and config ===
+.env
+.env.*
+
+# === Cache and temp ===
+.cache/
+*.tmp
+
+# === Database dumps ===
+*.sql
+
+# === Build outputs ===
+/public/build/
+/frontend/assets/build/
+
+# === Uploads and user files ===
+/uploads/
+frontend/uploads/
+
+# === Misc ===
+*.bak
+*.old
+
+*.bak
+*.old
+
+# Ignore compiled CSS/JS (if any build step added later)
+/public/build/
+/frontend/assets/build/
