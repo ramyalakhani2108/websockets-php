@@ -1,54 +1,94 @@
 <?php
 use Workerman\Worker;
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../backend/src/Service/ChatService.php';
 
-$ws_worker = new Worker("websocket://0.0.0.0:2346");
-$ws_worker->count = 4;
+use App\Service\ChatService;
+use Workerman\Connection\TcpConnection;
 
-// Log new connections
-$ws_worker->onConnect = function($connection) {
-    echo "[WS] New connection from: " . $connection->getRemoteIp() . "\n";
-};
+/**
+ * Class ChatServer
+ * OOP WebSocket server with dependency-injected ChatService.
+ */
+class ChatServer
+{
+    private Worker $ws_worker;
+    private ChatService $chatService;
 
-// Log closed connections
-$ws_worker->onClose = function($connection) {
-    echo "[WS] Connection closed: " . (isset($connection->user_id) ? $connection->user_id : 'unknown') . "\n";
-};
-
-$ws_worker->onMessage = function($connection, $data) use ($ws_worker) {
-    echo "[WS] Received from " . $connection->getRemoteIp() . ": $data\n";
-    $msg = json_decode($data, true);
-    if (!$msg) {
-        echo "[WS] Invalid JSON received\n";
-        return;
+    public function __construct(ChatService $chatService)
+    {
+        $this->chatService = $chatService;
+        $this->ws_worker = new Worker("websocket://0.0.0.0:2346");
+        $this->ws_worker->count = 4;
+        $this->ws_worker->onConnect = [$this, 'onConnect'];
+        $this->ws_worker->onClose = [$this, 'onClose'];
+        $this->ws_worker->onMessage = function($connection, $data) {
+            $this->onMessage($connection, $data);
+        };
     }
-    if (isset($msg['type']) && $msg['type'] === 'login') {
-        // Client sends: {type: 'login', user_id: ...}
-        $connection->user_id = $msg['user_id'];
-        echo "[WS] Login from user_id: {$msg['user_id']}\n";
-        return;
+
+    /**
+     * @param TcpConnection $connection
+     */
+    public function onConnect($connection): void
+    {
+        // (Logging removed)
     }
-    if (isset($msg['type']) && $msg['type'] === 'chat') {
-        echo "[WS] Chat from {$msg['from_id']} to {$msg['to_id']} | Message: {$msg['message']}\n";
-        // Send to recipient (if online)
-        $sent = 0;
-        foreach ($ws_worker->connections as $client) {
-            if (isset($client->user_id) && ($client->user_id == $msg['to_id'] || $client->user_id == $msg['from_id'])) {
-                $client->send(json_encode([
-                    'type' => 'chat',
-                    'from_id' => $msg['from_id'],
-                    'to_id' => $msg['to_id'],
-                    'message' => $msg['message'],
-                    'time' => $msg['time']
+
+    /**
+     * @param TcpConnection $connection
+     */
+    public function onClose($connection): void
+    {
+        // No logging in production
+        // Clean up if needed (e.g., remove user from memory, notify others)
+    }
+
+    /**
+     * @param TcpConnection $connection
+     * @param string $data
+     */
+    public function onMessage($connection, $data): void
+    {
+        file_put_contents('/tmp/ws_debug.log', "[IN] " . date('H:i:s') . " " . ($connection->user_id ?? '-') . ": $data\n", FILE_APPEND);
+        $msg = json_decode($data, true);
+        if (!is_array($msg)) {
+            $connection->send(json_encode([
+                'type' => 'error',
+                'error' => 'Malformed JSON.'
+            ]));
+            return;
+        }
+        if (!isset($msg['type'])) {
+            $connection->send(json_encode([
+                'type' => 'error',
+                'error' => 'Missing message type.'
+            ]));
+            return;
+        }
+        switch ($msg['type']) {
+            case 'login':
+                $this->chatService->handleLogin($connection, $msg);
+                break;
+            case 'chat':
+                $this->chatService->handleChat($connection, $msg, $this->ws_worker);
+                break;
+            default:
+                $connection->send(json_encode([
+                    'type' => 'error',
+                    'error' => 'Unknown message type.'
                 ]));
-                echo "[WS] Sent to client user_id: {$client->user_id}\n";
-                $sent++;
-            }
-        }
-        if ($sent === 0) {
-            echo "[WS] No recipient found for user_id: {$msg['to_id']}\n";
+                break;
         }
     }
-};
 
-Worker::runAll();
+    public function run(): void
+    {
+        Worker::runAll();
+    }
+}
+
+// Dependency injection
+$chatService = new ChatService();
+$server = new ChatServer($chatService);
+$server->run();

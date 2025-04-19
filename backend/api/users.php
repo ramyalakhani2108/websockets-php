@@ -1,66 +1,53 @@
 <?php
+// CORS headers
+// Dynamic CORS for dev
+// Universal CORS for dev (echo back Origin if present, allow credentials)
+if (isset($_SERVER['HTTP_ORIGIN'])) {
+    header("Access-Control-Allow-Origin: " . $_SERVER['HTTP_ORIGIN']);
+    header("Access-Control-Allow-Credentials: true");
+} else {
+    header("Access-Control-Allow-Origin: *");
+}
+header("Access-Control-Allow-Headers: Content-Type, X-Requested-With, Authorization");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
 // users.php: Handles user-related actions (register, login, fetch users)
 
-require_once '../db.php';
-require_once '../config.php';
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../src/Database/Database.php';
+require_once __DIR__ . '/../src/Model/User.php';
+require_once __DIR__ . '/../src/Service/UserService.php';
+require_once __DIR__ . '/../src/Controller/UserController.php';
+
+use App\Database\Database;
+use App\Service\UserService;
+use App\Controller\UserController;
 
 header('Content-Type: application/json');
 
+// Dependency injection
+$db = new Database(DB_HOST, DB_NAME, DB_USER, DB_PASS);
+$userService = new UserService($db);
+$controller = new UserController($userService);
+
 $method = $_SERVER['REQUEST_METHOD'];
+$input = json_decode(file_get_contents('php://input'), true);
 
 switch ($method) {
     case 'POST':
-        $input = json_decode(file_get_contents('php://input'), true);
-        $action = isset($input['action']) ? $input['action'] : '';
-        $pdo = getDbConnection();
+        $action = $input['action'] ?? '';
         if ($action === 'register') {
-            $username = trim($input['username'] ?? '');
-            $password = $input['password'] ?? '';
-            if (!$username || !$password) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Username and password required']);
-                exit;
-            }
-            // Check if username exists
-            $stmt = $pdo->prepare('SELECT id FROM users WHERE username = ?');
-            $stmt->execute([$username]);
-            if ($stmt->fetch()) {
-                http_response_code(409);
-                echo json_encode(['error' => 'Username already exists']);
-                exit;
-            }
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-            $stmt->execute([$username, $hash]);
-            $id = $pdo->lastInsertId();
-            echo json_encode(['id' => $id, 'username' => $username]);
+            $controller->register($input);
         } elseif ($action === 'login') {
-            $username = trim($input['username'] ?? '');
-            $password = $input['password'] ?? '';
-            if (!$username || !$password) {
-                http_response_code(400);
-                echo json_encode(['error' => 'Username and password required']);
-                exit;
-            }
-            $stmt = $pdo->prepare('SELECT id, password FROM users WHERE username = ?');
-            $stmt->execute([$username]);
-            $user = $stmt->fetch();
-            if ($user && password_verify($password, $user['password'])) {
-                echo json_encode(['id' => $user['id'], 'username' => $username]);
-            } else {
-                http_response_code(401);
-                echo json_encode(['error' => 'Invalid credentials']);
-            }
+            $controller->login($input);
         } else {
             http_response_code(400);
             echo json_encode(['error' => 'Invalid action']);
         }
         break;
     case 'GET':
-        $pdo = getDbConnection();
-        $stmt = $pdo->query('SELECT id, username FROM users ORDER BY username');
-        $users = $stmt->fetchAll();
-        echo json_encode($users);
+        $controller->fetchUsers();
         break;
     default:
         http_response_code(405);
