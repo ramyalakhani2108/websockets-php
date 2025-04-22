@@ -1,6 +1,7 @@
 <?php
 use Workerman\Worker;
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/config.php'; // Add this line to define DB_* constants
 require_once __DIR__ . '/../backend/src/Service/ChatService.php';
 
 use App\Service\ChatService;
@@ -72,6 +73,13 @@ class ChatServer
                 break;
             case 'chat':
                 $this->chatService->handleChat($connection, $msg, $this->ws_worker);
+                break;
+            case 'group_chat':
+                $this->chatService->handleGroupChat($connection, $msg, $this->ws_worker);
+                break;
+            case 'ping':
+                // Optionally reply with a pong or do nothing
+                $connection->send(json_encode(['type' => 'pong']));
                 break;
             default:
                 $connection->send(json_encode([
